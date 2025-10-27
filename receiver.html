@@ -202,7 +202,9 @@
           cast.framework.events.EventType.ERROR,
           (event) => {
             log("ERROR:", event);
-            updateDebug("state", "ERROR");
+            log("Error code:", event.detailedErrorCode);
+            log("Error reason:", event.error?.reason);
+            updateDebug("state", "ERROR: " + event.detailedErrorCode);
             hideSplash();
           }
         );
