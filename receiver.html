@@ -1,20 +1,243 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>Minimal Test Receiver</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Takokase Custom Receiver</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: #000000;
+        font-family: "Arial", sans-serif;
+        overflow: hidden;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      /* Cast media player */
+      cast-media-player {
+        width: 100%;
+        height: 100%;
+        --splash-image: none;
+        --progress-color: #667eea;
+        --theme-hue: 250;
+        --logo-image: none;
+      }
+
+      /* Splash screen overlay */
+      #splash {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #107f48;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        transition: opacity 0.5s ease-out;
+      }
+
+      #splash.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #splash h1 {
+        font-size: 72px;
+        color: #ffffff;
+        font-weight: bold;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        margin-bottom: 20px;
+      }
+
+      #splash p {
+        font-size: 24px;
+        color: #ffffff;
+        opacity: 0.9;
+      }
+
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #ffffff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-top: 30px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Debug overlay */
+      #debug {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #00ff00;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 14px;
+        border-radius: 4px;
+        z-index: 500;
+        max-width: 400px;
+      }
+
+      #debug.hidden {
+        display: none;
+      }
+    </style>
   </head>
-  <body style="background: green">
-    <h1 style="color: white; text-align: center; margin-top: 200px">
-      RECEIVER LOADED!
-    </h1>
+  <body>
+    <!-- Splash Screen -->
+    <div id="splash">
+      <h1>Takokase</h1>
+      <p id="splash-text">Ready to Cast</p>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Cast Media Player -->
     <cast-media-player></cast-media-player>
 
+    <!-- Debug Info -->
+    <div id="debug">
+      <div>Status: <span id="status">Initializing...</span></div>
+      <div>Tracks: <span id="tracks">0</span></div>
+      <div>State: <span id="state">IDLE</span></div>
+    </div>
+
+    <!-- Cast Receiver SDK -->
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+
+    <!-- Receiver Logic -->
     <script>
-      console.log("Minimal receiver starting...");
-      const context = cast.framework.CastReceiverContext.getInstance();
-      context.start();
-      console.log("Minimal receiver started!");
+      const DEBUG = true;
+      const LOG_PREFIX = "[Takokase]";
+
+      function log(...args) {
+        console.log(LOG_PREFIX, ...args);
+      }
+
+      function updateDebug(key, value) {
+        const el = document.getElementById(key);
+        if (el) el.textContent = value;
+      }
+
+      function hideSplash() {
+        const splash = document.getElementById("splash");
+        splash.classList.add("hidden");
+        log("Splash screen hidden");
+      }
+
+      function updateSplashText(text) {
+        const splashText = document.getElementById("splash-text");
+        if (splashText) splashText.textContent = text;
+      }
+
+      // Initialize receiver
+      try {
+        log("Initializing receiver...");
+
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = context.getPlayerManager();
+
+        // Configure options
+        const options = new cast.framework.CastReceiverOptions();
+        options.disableIdleTimeout = false;
+        options.maxInactivity = 3600;
+
+        // Listen for load events
+        playerManager.addEventListener(
+          cast.framework.events.EventType.PLAYER_LOADING,
+          (event) => {
+            log("PLAYER_LOADING event");
+            updateSplashText("Loading Media...");
+            updateDebug("state", "LOADING");
+          }
+        );
+
+        playerManager.addEventListener(
+          cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
+          (event) => {
+            log("PLAYER_LOAD_COMPLETE - Video ready!");
+            hideSplash();
+            updateDebug("state", "LOADED");
+
+            // Log media info
+            const mediaInfo = playerManager.getMediaInformation();
+            if (mediaInfo) {
+              log("Media URL:", mediaInfo.contentId);
+              log("Content Type:", mediaInfo.contentType);
+
+              if (mediaInfo.tracks) {
+                log("Tracks found:", mediaInfo.tracks.length);
+                updateDebug("tracks", mediaInfo.tracks.length);
+              }
+            }
+
+            // Check for audio tracks in media element
+            const mediaElement = playerManager.getMediaElement();
+            if (mediaElement && mediaElement.audioTracks) {
+              log("HTML5 audio tracks:", mediaElement.audioTracks.length);
+            }
+          }
+        );
+
+        playerManager.addEventListener(
+          cast.framework.events.EventType.ERROR,
+          (event) => {
+            log("ERROR:", event);
+            updateDebug("state", "ERROR");
+            hideSplash();
+          }
+        );
+
+        // Intercept LOAD to log details
+        playerManager.setMessageInterceptor(
+          cast.framework.messages.MessageType.LOAD,
+          (loadRequestData) => {
+            log("LOAD intercepted:", loadRequestData);
+
+            if (loadRequestData.media) {
+              log(
+                "Media tracks in request:",
+                loadRequestData.media.tracks?.length || 0
+              );
+            }
+
+            return loadRequestData;
+          }
+        );
+
+        // Start the receiver
+        context.start(options);
+
+        log("Receiver started successfully!");
+        updateDebug("status", "Ready");
+
+        // Show debug panel if enabled
+        if (DEBUG) {
+          document.getElementById("debug").classList.remove("hidden");
+        }
+      } catch (error) {
+        console.error(LOG_PREFIX, "Failed to initialize receiver:", error);
+        updateDebug("status", "ERROR: " + error.message);
+      }
     </script>
   </body>
 </html>
