@@ -3,971 +3,185 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Takokase Custom Receiver - Enhanced Debug</title>
+    <title>Takokase HLS.js Receiver</title>
     <style>
-      * {
+      body,
+      html {
         margin: 0;
         padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        background-color: #000000;
-        font-family: "Arial", sans-serif;
-        overflow: hidden;
-        width: 100vw;
-        height: 100vh;
-      }
-
-      /* Cast media player */
-      cast-media-player {
         width: 100%;
         height: 100%;
-        --splash-image: none;
-        --progress-color: #667eea;
-        --theme-hue: 250;
-        --logo-image: none;
+        background: #000;
+        font-family: Arial, sans-serif;
       }
-
-      /* Splash screen overlay */
-      #splash {
-        position: fixed;
-        top: 0;
-        left: 0;
+      #video-container {
+        position: relative;
         width: 100%;
         height: 100%;
-        background: #107f48;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-        transition: opacity 0.5s ease-out;
       }
-
-      #splash.hidden {
-        opacity: 0;
-        pointer-events: none;
+      video {
+        width: 100%;
+        height: 100%;
+        background: black;
       }
-
-      #splash h1 {
-        font-size: 72px;
-        color: #ffffff;
-        font-weight: bold;
-        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        margin-bottom: 20px;
-      }
-
-      #splash p {
-        font-size: 24px;
-        color: #ffffff;
-        opacity: 0.9;
-      }
-
-      .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid #ffffff;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        animation: spin 1s linear infinite;
-        margin-top: 30px;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-
-      /* Enhanced Debug overlay with scrolling */
       #debug {
-        position: fixed;
+        position: absolute;
         top: 10px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.95);
-        color: #00ff00;
-        padding: 15px;
-        font-family: "Courier New", monospace;
+        background: rgba(0, 0, 0, 0.85);
+        color: #0f0;
+        padding: 10px;
+        font-family: monospace;
         font-size: 12px;
-        border-radius: 8px;
-        z-index: 500;
-        max-width: 500px;
+        max-width: 400px;
         max-height: 90vh;
         overflow-y: auto;
-        border: 2px solid #00ff00;
+        border: 2px solid #0f0;
+        z-index: 1000;
       }
-
-      #debug.hidden {
-        display: none;
-      }
-
-      #debug h3 {
-        color: #00ff00;
-        margin-bottom: 10px;
-        font-size: 16px;
-        border-bottom: 1px solid #00ff00;
-        padding-bottom: 5px;
-      }
-
-      #debug .section {
-        margin-bottom: 15px;
-      }
-
-      #debug .label {
-        color: #ffff00;
-        font-weight: bold;
-      }
-
-      #debug .value {
-        color: #00ff00;
-      }
-
-      #debug .error {
-        color: #ff0000;
-        font-weight: bold;
-      }
-
-      #debug .success {
-        color: #00ff00;
-        font-weight: bold;
-      }
-
-      #debug .warning {
-        color: #ffa500;
-        font-weight: bold;
-      }
-
-      #debug .log-entry {
+      .log-entry {
         margin: 5px 0;
-        padding: 5px;
-        background: rgba(0, 255, 0, 0.05);
-        border-left: 2px solid #00ff00;
-        padding-left: 10px;
-        font-size: 11px;
       }
-
-      #debug .log-entry.error {
-        border-left-color: #ff0000;
-        background: rgba(255, 0, 0, 0.05);
+      .log-entry.error {
+        color: #f00;
       }
-
-      #debug .log-entry.warning {
-        border-left-color: #ffa500;
-        background: rgba(255, 165, 0, 0.05);
+      .log-entry.warning {
+        color: #ffa500;
       }
-
-      #debug .log-entry.success {
-        border-left-color: #00ff00;
-        background: rgba(0, 255, 0, 0.1);
-      }
-
-      #debug .timestamp {
-        color: #888;
-        font-size: 10px;
-      }
-
-      /* Log container */
-      #log-container {
-        max-height: 300px;
-        overflow-y: auto;
-        margin-top: 10px;
-        border-top: 1px solid #00ff00;
-        padding-top: 10px;
-      }
-
-      /* Scrollbar styling */
-      #debug::-webkit-scrollbar,
-      #log-container::-webkit-scrollbar {
-        width: 8px;
-      }
-
-      #debug::-webkit-scrollbar-track,
-      #log-container::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.5);
-      }
-
-      #debug::-webkit-scrollbar-thumb,
-      #log-container::-webkit-scrollbar-thumb {
-        background: #00ff00;
-        border-radius: 4px;
-      }
-
-      /* Make URLs and long text wrap properly */
-      #server-url,
-      #key-url {
-        word-break: break-all;
-        font-size: 10px;
-        color: #00ff00;
+      .log-entry.success {
+        color: #0f0;
       }
     </style>
   </head>
   <body>
-    <!-- Splash Screen -->
-    <div id="splash">
-      <h1>Takokase</h1>
-      <p id="splash-text">Ready to Cast</p>
-      <div class="spinner"></div>
+    <div id="video-container">
+      <video id="video" controls autoplay></video>
+      <div id="debug"></div>
     </div>
 
-    <!-- Cast Media Player -->
-    <cast-media-player></cast-media-player>
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-    <!-- Enhanced Debug Info -->
-    <div id="debug">
-      <h3>🎯 Takokase Receiver Debug</h3>
-
-      <div class="section">
-        <div>
-          <span class="label">Status:</span>
-          <span id="status" class="value">Initializing...</span>
-        </div>
-        <div>
-          <span class="label">Player State:</span>
-          <span id="state" class="value">IDLE</span>
-        </div>
-        <div>
-          <span class="label">Media Type:</span>
-          <span id="media-type" class="value">-</span>
-        </div>
-      </div>
-
-      <div class="section">
-        <div><span class="label">📡 Server URL:</span></div>
-        <div id="server-url" class="value">Not loaded</div>
-      </div>
-
-      <div class="section">
-        <div>
-          <span class="label">🎵 Audio Tracks:</span>
-          <span id="audio-tracks" class="value">0</span>
-        </div>
-        <div>
-          <span class="label">📝 Text Tracks:</span>
-          <span id="text-tracks" class="value">0</span>
-        </div>
-        <div>
-          <span class="label">🎬 Video Tracks:</span>
-          <span id="video-tracks" class="value">0</span>
-        </div>
-      </div>
-
-      <div class="section">
-        <div>
-          <span class="label">🔐 Encryption:</span>
-          <span id="encryption" class="value">Unknown</span>
-        </div>
-        <div><span class="label">🔑 Key URL:</span></div>
-        <div id="key-url" class="value">Not detected</div>
-      </div>
-
-      <div class="section">
-        <div>
-          <span class="label">📊 Current Segment:</span>
-          <span id="current-segment" class="value">-</span>
-        </div>
-        <div>
-          <span class="label">⏱️ Playback Time:</span>
-          <span id="playback-time" class="value">0:00</span>
-        </div>
-        <div>
-          <span class="label">📶 Buffer:</span>
-          <span id="buffer-level" class="value">0%</span>
-        </div>
-      </div>
-
-      <div class="section">
-        <div><span class="label">❌ Last Error:</span></div>
-        <div id="last-error" class="error">None</div>
-      </div>
-
-      <div class="section">
-        <div><span class="label">📜 Event Log:</span></div>
-        <div id="log-container"></div>
-      </div>
-    </div>
-
-    <!-- Cast Receiver SDK -->
+    <!-- Chromecast Receiver SDK -->
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 
-    <!-- Enhanced Receiver Logic -->
     <script>
       const DEBUG = true;
-      const LOG_PREFIX = "[Takokase]";
-      const MAX_LOG_ENTRIES = 50;
+      const LOG_LIMIT = 50;
+      const logContainer = document.getElementById("debug");
+      let logs = [];
 
-      let logEntries = [];
-      let segmentCount = 0;
-      let lastSegmentUrl = "";
-
-      // ============================================
-      // LOGGING FUNCTIONS
-      // ============================================
-
-      function getTimestamp() {
-        const now = new Date();
-        return (
-          now.toLocaleTimeString() +
-          "." +
-          now.getMilliseconds().toString().padStart(3, "0")
-        );
-      }
-
-      function log(...args) {
-        const timestamp = getTimestamp();
-        const message = args.join(" ");
-        console.log(LOG_PREFIX, timestamp, ...args);
-        addLogEntry(message, "info");
-      }
-
-      function logError(...args) {
-        const timestamp = getTimestamp();
-        const message = args.join(" ");
-        console.error(LOG_PREFIX, timestamp, ...args);
-        addLogEntry(message, "error");
-      }
-
-      function logWarning(...args) {
-        const timestamp = getTimestamp();
-        const message = args.join(" ");
-        console.warn(LOG_PREFIX, timestamp, ...args);
-        addLogEntry(message, "warning");
-      }
-
-      function logSuccess(...args) {
-        const timestamp = getTimestamp();
-        const message = args.join(" ");
-        console.log(LOG_PREFIX, "✅", timestamp, ...args);
-        addLogEntry(message, "success");
-      }
-
-      function addLogEntry(message, type = "info") {
-        const timestamp = getTimestamp();
-        logEntries.unshift({ timestamp, message, type });
-
-        // Keep only last MAX_LOG_ENTRIES
-        if (logEntries.length > MAX_LOG_ENTRIES) {
-          logEntries = logEntries.slice(0, MAX_LOG_ENTRIES);
+      function addLog(msg, type = "info") {
+        const entry = document.createElement("div");
+        entry.className = "log-entry " + type;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logContainer.prepend(entry);
+        logs.unshift(entry);
+        if (logs.length > LOG_LIMIT) {
+          logs.pop().remove();
         }
-
-        updateLogDisplay();
+        if (DEBUG) console.log(msg);
       }
 
-      function updateLogDisplay() {
-        const container = document.getElementById("log-container");
-        if (!container) return;
+      const video = document.getElementById("video");
 
-        container.innerHTML = logEntries
-          .map((entry) => {
-            const className = entry.type;
-            return `<div class="log-entry ${className}">
-            <span class="timestamp">[${entry.timestamp}]</span> ${entry.message}
-          </div>`;
-          })
-          .join("");
+      // =================================
+      // Initialize HLS.js
+      // =================================
+      function initHLS(url, keyUrl = null) {
+        if (Hls.isSupported()) {
+          const hlsConfig = {
+            xhrSetup: function (xhr, url) {
+              // Optional: add custom headers
+            },
+          };
+          const hls = new Hls(hlsConfig);
 
-        // Auto-scroll to top (newest entries)
-        container.scrollTop = 0;
-      }
-
-      // ============================================
-      // DEBUG UI UPDATE FUNCTIONS
-      // ============================================
-
-      function updateDebug(key, value, className = "value") {
-        const el = document.getElementById(key);
-        if (el) {
-          el.textContent = value;
-          el.className = className;
-        }
-      }
-
-      function updateServerUrl(url) {
-        updateDebug("server-url", url);
-        log("📡 Server URL:", url);
-      }
-
-      function updateMediaType(type) {
-        updateDebug("media-type", type);
-      }
-
-      function updateEncryption(hasEncryption, keyUrl = null) {
-        if (hasEncryption) {
-          updateDebug("encryption", "AES-128 ✓", "success");
           if (keyUrl) {
-            updateDebug("key-url", keyUrl);
-            log("🔑 Encryption Key URL:", keyUrl);
+            addLog("🔐 AES-128 key detected, using custom key URL", "success");
           }
-        } else {
-          updateDebug("encryption", "None", "value");
-        }
-      }
 
-      function updateLastError(error) {
-        if (error) {
-          updateDebug("last-error", error, "error");
-          logError("❌ ERROR:", error);
-        } else {
-          updateDebug("last-error", "None", "success");
-        }
-      }
+          hls.loadSource(url);
 
-      function updatePlaybackTime(currentTime, duration) {
-        const formatTime = (seconds) => {
-          const mins = Math.floor(seconds / 60);
-          const secs = Math.floor(seconds % 60);
-          return `${mins}:${secs.toString().padStart(2, "0")}`;
-        };
-
-        const timeStr = duration
-          ? `${formatTime(currentTime)} / ${formatTime(duration)}`
-          : formatTime(currentTime);
-
-        updateDebug("playback-time", timeStr);
-      }
-
-      // ============================================
-      // SPLASH SCREEN FUNCTIONS
-      // ============================================
-
-      function hideSplash() {
-        const splash = document.getElementById("splash");
-        splash.classList.add("hidden");
-        log("✅ Splash screen hidden - Media ready");
-      }
-
-      function updateSplashText(text) {
-        const splashText = document.getElementById("splash-text");
-        if (splashText) splashText.textContent = text;
-        log("💬 Splash:", text);
-      }
-
-      // ============================================
-      // MEDIA ANALYSIS FUNCTIONS
-      // ============================================
-
-      function analyzeMediaInfo(mediaInfo) {
-        if (!mediaInfo) {
-          logWarning("⚠️ No media info available");
-          return;
-        }
-
-        log("═══════════════════════════════════════");
-        log("📊 MEDIA INFORMATION ANALYSIS");
-        log("═══════════════════════════════════════");
-
-        // Content URL
-        if (mediaInfo.contentId) {
-          const url = mediaInfo.contentId;
-          updateServerUrl(url);
-
-          // Extract server base URL
-          try {
-            const urlObj = new URL(url);
-            const serverBase = `${urlObj.protocol}//${urlObj.host}`;
-            log("🏠 Server Base:", serverBase);
-
-            // Check if it's HLS
-            if (url.includes(".m3u8")) {
-              log("📺 Format: HLS (HTTP Live Streaming)");
-              updateMediaType("HLS");
-            }
-          } catch (e) {
-            logError("Failed to parse URL:", e.message);
-          }
-        }
-
-        // Content Type
-        if (mediaInfo.contentType) {
-          log("📄 Content-Type:", mediaInfo.contentType);
-
-          if (
-            mediaInfo.contentType.includes("mpegurl") ||
-            mediaInfo.contentType.includes("x-mpegurl")
-          ) {
-            log("✅ Valid HLS content type detected");
-          }
-        }
-
-        // Tracks
-        if (mediaInfo.tracks && mediaInfo.tracks.length > 0) {
-          log("🎵 Tracks found:", mediaInfo.tracks.length);
-
-          let audioCount = 0;
-          let textCount = 0;
-          let videoCount = 0;
-
-          mediaInfo.tracks.forEach((track, index) => {
-            const typeStr =
-              track.type === 1
-                ? "TEXT"
-                : track.type === 2
-                ? "AUDIO"
-                : track.type === 3
-                ? "VIDEO"
-                : "UNKNOWN";
-
-            log(
-              `  Track ${index}: ${typeStr} - ${track.name || "Unnamed"} (${
-                track.language || "no-lang"
-              })`
+          hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+            addLog(
+              `✅ HLS Manifest loaded, ${data.levels.length} quality levels`
             );
-
-            if (track.type === 2) audioCount++;
-            if (track.type === 1) textCount++;
-            if (track.type === 3) videoCount++;
+            video.play();
           });
 
-          updateDebug("audio-tracks", audioCount);
-          updateDebug("text-tracks", textCount);
-          updateDebug("video-tracks", videoCount);
-        } else {
-          log("⚠️ No tracks information in media");
-          updateDebug("audio-tracks", 0);
-          updateDebug("text-tracks", 0);
-          updateDebug("video-tracks", 0);
-        }
-
-        // Custom Data
-        if (mediaInfo.customData) {
-          log("📦 Custom Data:", JSON.stringify(mediaInfo.customData, null, 2));
-        }
-
-        // Metadata
-        if (mediaInfo.metadata) {
-          log("📝 Metadata:", {
-            title: mediaInfo.metadata.title,
-            subtitle: mediaInfo.metadata.subtitle,
+          hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
+            addLog(`📶 Switched to level: ${data.level}`);
           });
-        }
 
-        log("═══════════════════════════════════════");
-      }
-
-      function analyzeHLSPlaylist(url) {
-        log("🔍 Attempting to fetch and analyze HLS playlist...");
-
-        fetch(url)
-          .then((response) => {
-            log(
-              `📡 Playlist fetch response: ${response.status} ${response.statusText}`
-            );
-
-            if (!response.ok) {
-              logError(`❌ Failed to fetch playlist: ${response.status}`);
-              return null;
-            }
-
-            return response.text();
-          })
-          .then((playlistContent) => {
-            if (!playlistContent) return;
-
-            log("✅ Playlist fetched successfully");
-            log("📄 Playlist size:", playlistContent.length, "bytes");
-
-            // Check for encryption
-            if (playlistContent.includes("#EXT-X-KEY")) {
-              logWarning("🔐 ENCRYPTION DETECTED in playlist");
-
-              const keyMatch = playlistContent.match(
-                /#EXT-X-KEY:METHOD=([^,]+),URI="([^"]+)"/
-              );
-              if (keyMatch) {
-                const method = keyMatch[1];
-                const keyUrl = keyMatch[2];
-                log(`  Method: ${method}`);
-                log(`  Key URL: ${keyUrl}`);
-                updateEncryption(true, keyUrl);
-
-                // Test key accessibility
-                testKeyUrl(keyUrl);
-              }
-            } else {
-              log("✅ No encryption detected");
-              updateEncryption(false);
-            }
-
-            // Check for segments
-            const segmentMatches = playlistContent.match(/^[^#].*\.ts$/gm);
-            if (segmentMatches) {
-              log(`📦 Found ${segmentMatches.length} segment references`);
-              log(`  First segment: ${segmentMatches[0]}`);
-            }
-
-            // Check for audio renditions
-            const audioMatches = playlistContent.match(
-              /#EXT-X-MEDIA:TYPE=AUDIO.*/g
-            );
-            if (audioMatches) {
-              log(
-                `🎵 Found ${audioMatches.length} audio renditions in master playlist`
-              );
-              audioMatches.forEach((match, i) => {
-                const langMatch = match.match(/LANGUAGE="([^"]+)"/);
-                const nameMatch = match.match(/NAME="([^"]+)"/);
-                if (langMatch && nameMatch) {
-                  log(`  Audio ${i + 1}: ${nameMatch[1]} (${langMatch[1]})`);
-                }
-              });
-            }
-          })
-          .catch((error) => {
-            logError("❌ Failed to fetch playlist:", error.message);
-            logError("  This could indicate:");
-            logError("  - Server not accessible from Chromecast");
-            logError("  - CORS headers missing");
-            logError("  - Network connectivity issue");
+          hls.on(Hls.Events.FRAG_LOADED, function (event, data) {
+            addLog(`📦 Segment loaded: ${data.frag.url}`);
           });
-      }
 
-      function testKeyUrl(keyUrl) {
-        log("🔑 Testing encryption key accessibility...");
-
-        fetch(keyUrl)
-          .then((response) => {
-            log(
-              `  Key fetch response: ${response.status} ${response.statusText}`
-            );
-
-            if (!response.ok) {
-              logError(`  ❌ Key not accessible: ${response.status}`);
-              return null;
-            }
-
-            return response.arrayBuffer();
-          })
-          .then((keyData) => {
-            if (!keyData) return;
-
-            log(`  ✅ Key fetched successfully`);
-            log(`  Key size: ${keyData.byteLength} bytes`);
-
-            if (keyData.byteLength !== 16) {
-              logError(
-                `  ⚠️ WARNING: Key size is ${keyData.byteLength} bytes, expected 16 bytes for AES-128`
+          hls.on(Hls.Events.ERROR, function (event, data) {
+            if (data.fatal) {
+              addLog(
+                `❌ Fatal HLS.js error: ${data.type} - ${data.details}`,
+                "error"
               );
             } else {
-              logSuccess("  ✅ Key size is correct (16 bytes)");
+              addLog(
+                `⚠️ HLS.js warning: ${data.type} - ${data.details}`,
+                "warning"
+              );
             }
-          })
-          .catch((error) => {
-            logError("  ❌ Failed to fetch key:", error.message);
-            logError("  CRITICAL: Encrypted content cannot play without key!");
           });
+
+          // Audio & subtitle tracks
+          hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (event, data) {
+            addLog(`🎵 Audio tracks: ${data.audioTracks.length}`);
+            data.audioTracks.forEach((t, i) => {
+              addLog(`  Track ${i}: ${t.name} (${t.lang})`);
+            });
+          });
+
+          hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, function (event, data) {
+            addLog(`📝 Subtitle tracks: ${data.subtitleTracks.length}`);
+            data.subtitleTracks.forEach((t, i) => {
+              addLog(`  Subtitle ${i}: ${t.name} (${t.lang})`);
+            });
+          });
+
+          hls.attachMedia(video);
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          addLog("⚠️ Native HLS playback");
+          video.src = url;
+          video.addEventListener("loadedmetadata", () => {
+            video.play();
+          });
+        } else {
+          addLog("❌ HLS not supported on this device", "error");
+        }
       }
 
-      // ============================================
-      // SEGMENT MONITORING
-      // ============================================
+      // =================================
+      // Chromecast Receiver Setup
+      // =================================
+      const context = cast.framework.CastReceiverContext.getInstance();
+      const playerManager = context.getPlayerManager();
 
-      function monitorSegments(mediaElement) {
-        if (!mediaElement) return;
+      playerManager.setMessageInterceptor(
+        cast.framework.messages.MessageType.LOAD,
+        (loadRequest) => {
+          addLog("📨 LOAD intercepted");
+          const url = loadRequest.media.contentId;
+          const keyUrl = loadRequest.media.customData?.keyUrl || null;
 
-        // Monitor progress to detect segment changes
-        let lastLogTime = 0;
+          addLog(`📡 Media URL: ${url}`);
+          if (keyUrl) addLog(`🔑 Key URL: ${keyUrl}`, "success");
 
-        mediaElement.addEventListener("progress", () => {
-          const now = Date.now();
-          if (now - lastLogTime > 2000) {
-            // Log every 2 seconds
-            lastLogTime = now;
-
-            const buffered = mediaElement.buffered;
-            if (buffered.length > 0) {
-              const bufferEnd = buffered.end(buffered.length - 1);
-              const currentTime = mediaElement.currentTime;
-              const bufferAhead = bufferEnd - currentTime;
-
-              updateDebug("buffer-level", `${bufferAhead.toFixed(1)}s`);
-
-              if (bufferAhead < 5) {
-                logWarning(`⚠️ Low buffer: ${bufferAhead.toFixed(1)}s ahead`);
-              }
-            }
-          }
-        });
-
-        // Monitor time updates
-        mediaElement.addEventListener("timeupdate", () => {
-          const currentTime = mediaElement.currentTime;
-          const duration = mediaElement.duration;
-
-          if (!isNaN(currentTime) && !isNaN(duration)) {
-            updatePlaybackTime(currentTime, duration);
-          }
-        });
-
-        // Monitor segment loading (approximation based on time)
-        let lastSegmentTime = 0;
-        mediaElement.addEventListener("timeupdate", () => {
-          const currentTime = mediaElement.currentTime;
-          const segmentDuration = 10; // Assume 10-second segments
-          const currentSegment = Math.floor(currentTime / segmentDuration);
-
-          if (currentSegment !== lastSegmentTime) {
-            lastSegmentTime = currentSegment;
-            segmentCount++;
-            updateDebug("current-segment", `#${currentSegment}`);
-            log(
-              `📦 Playing segment: #${currentSegment} (~${currentTime.toFixed(
-                1
-              )}s)`
-            );
-          }
-        });
-
-        // Monitor waiting (buffering)
-        mediaElement.addEventListener("waiting", () => {
-          logWarning("⏸️ Buffering...");
-          updateDebug("state", "BUFFERING", "warning");
-        });
-
-        // Monitor playing resumed
-        mediaElement.addEventListener("playing", () => {
-          logSuccess("▶️ Playback resumed");
-          updateDebug("state", "PLAYING", "success");
-        });
-
-        // Monitor stalls
-        mediaElement.addEventListener("stalled", () => {
-          logWarning("⚠️ Network stall detected");
-        });
-
-        // Monitor errors on media element
-        mediaElement.addEventListener("error", (e) => {
-          const error = mediaElement.error;
-          if (error) {
-            const errorCodes = {
-              1: "MEDIA_ERR_ABORTED",
-              2: "MEDIA_ERR_NETWORK",
-              3: "MEDIA_ERR_DECODE",
-              4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
-            };
-
-            const errorMsg =
-              errorCodes[error.code] || `Unknown error ${error.code}`;
-            logError(`❌ Media Element Error: ${errorMsg}`);
-            logError(`   Message: ${error.message || "No message"}`);
-            updateLastError(`${errorMsg}: ${error.message || "No details"}`);
-          }
-        });
-
-        log("✅ Segment monitoring enabled");
-      }
-
-      // ============================================
-      // ERROR ANALYSIS
-      // ============================================
-
-      function analyzeError(event) {
-        log("═══════════════════════════════════════");
-        log("❌ ERROR EVENT RECEIVED");
-        log("═══════════════════════════════════════");
-
-        const errorCode = event.detailedErrorCode;
-        const error = event.error;
-
-        log("Error Code:", errorCode);
-
-        if (error) {
-          log("Error Reason:", error.reason);
-          log("Error Type:", error.type);
-          log("Error Details:", JSON.stringify(error, null, 2));
+          initHLS(url, keyUrl);
+          return loadRequest;
         }
+      );
 
-        // Error 905 specific analysis
-        if (errorCode === 905) {
-          logError("🚨 ERROR 905: MEDIA_ERROR_DECODE");
-          logError("This typically means:");
-          logError("  1. Content format not supported by receiver");
-          logError("  2. Encryption/DRM issue");
-          logError("  3. Corrupted media data");
-          logError("  4. Missing or inaccessible encryption key");
-          logError("");
-          logError("TROUBLESHOOTING:");
-          logError("  ✓ Check if encryption key URL is accessible");
-          logError("  ✓ Verify key returns exactly 16 bytes");
-          logError("  ✓ Check CORS headers on server");
-          logError("  ✓ Test with default receiver");
-          logError("  ✓ Verify HLS playlist format");
-        }
-
-        // Network errors
-        if (errorCode >= 900 && errorCode < 1000) {
-          logError("🌐 Network-related error");
-          logError("  - Check Chromecast can reach server");
-          logError("  - Verify same network/no firewall");
-          logError("  - Check server logs for requests");
-        }
-
-        updateLastError(`Error ${errorCode}: ${error?.reason || "Unknown"}`);
-        updateDebug("state", `ERROR ${errorCode}`, "error");
-
-        log("═══════════════════════════════════════");
-      }
-
-      // ============================================
-      // RECEIVER INITIALIZATION
-      // ============================================
-
-      try {
-        log("═══════════════════════════════════════");
-        log("🚀 INITIALIZING TAKOKASE RECEIVER");
-        log("═══════════════════════════════════════");
-        log("Receiver version: Enhanced Debug v2.0");
-        log("Debug mode:", DEBUG ? "ENABLED" : "DISABLED");
-
-        const context = cast.framework.CastReceiverContext.getInstance();
-        const playerManager = context.getPlayerManager();
-
-        // Configure options for encrypted content
-        const options = new cast.framework.CastReceiverOptions();
-        options.disableIdleTimeout = false;
-        options.maxInactivity = 3600;
-
-        log("✅ Receiver options configured");
-
-        // ============================================
-        // EVENT LISTENERS
-        // ============================================
-
-        // PLAYER_LOADING
-        playerManager.addEventListener(
-          cast.framework.events.EventType.PLAYER_LOADING,
-          (event) => {
-            log("⏳ PLAYER_LOADING event received");
-            updateSplashText("Loading Media...");
-            updateDebug("state", "LOADING", "warning");
-            updateDebug("status", "Loading...", "warning");
-          }
-        );
-
-        // PLAYER_LOAD_COMPLETE
-        playerManager.addEventListener(
-          cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
-          (event) => {
-            logSuccess("✅ PLAYER_LOAD_COMPLETE - Media loaded successfully!");
-            hideSplash();
-            updateDebug("state", "LOADED", "success");
-            updateDebug("status", "Playing", "success");
-
-            // Analyze media info
-            const mediaInfo = playerManager.getMediaInformation();
-            if (mediaInfo) {
-              analyzeMediaInfo(mediaInfo);
-
-              // Fetch and analyze playlist if HLS
-              if (
-                mediaInfo.contentId &&
-                mediaInfo.contentId.includes(".m3u8")
-              ) {
-                analyzeHLSPlaylist(mediaInfo.contentId);
-              }
-            }
-
-            // Monitor segments
-            const mediaElement = playerManager.getMediaElement();
-            if (mediaElement) {
-              monitorSegments(mediaElement);
-            }
-          }
-        );
-
-        // ERROR
-        playerManager.addEventListener(
-          cast.framework.events.EventType.ERROR,
-          (event) => {
-            analyzeError(event);
-            hideSplash();
-          }
-        );
-
-        // MEDIA_STATUS
-        playerManager.addEventListener(
-          cast.framework.events.EventType.MEDIA_STATUS,
-          (event) => {
-            const mediaStatus = event.mediaStatus;
-            if (mediaStatus) {
-              const playerState = mediaStatus.playerState;
-              log(`📊 Media Status: ${playerState}`);
-              updateDebug("state", playerState);
-            }
-          }
-        );
-
-        // BITRATE_CHANGED
-        playerManager.addEventListener(
-          cast.framework.events.EventType.BITRATE_CHANGED,
-          (event) => {
-            log(`📶 Bitrate changed: ${event.totalBitrate} bps`);
-          }
-        );
-
-        // ============================================
-        // MESSAGE INTERCEPTORS
-        // ============================================
-
-        // Intercept LOAD request
-        playerManager.setMessageInterceptor(
-          cast.framework.messages.MessageType.LOAD,
-          (loadRequestData) => {
-            log("═══════════════════════════════════════");
-            log("📨 LOAD REQUEST INTERCEPTED");
-            log("═══════════════════════════════════════");
-            log("Full request:", JSON.stringify(loadRequestData, null, 2));
-
-            if (loadRequestData.media) {
-              log("Media URL:", loadRequestData.media.contentId);
-              log("Content Type:", loadRequestData.media.contentType);
-
-              if (loadRequestData.media.tracks) {
-                log("Tracks in request:", loadRequestData.media.tracks.length);
-                loadRequestData.media.tracks.forEach((track, i) => {
-                  log(`  Track ${i}:`, track);
-                });
-              }
-
-              if (loadRequestData.media.customData) {
-                log("Custom Data:", loadRequestData.media.customData);
-              }
-            }
-
-            log("═══════════════════════════════════════");
-            return loadRequestData;
-          }
-        );
-
-        // ============================================
-        // START RECEIVER
-        // ============================================
-
-        context.start(options);
-
-        logSuccess("═══════════════════════════════════════");
-        logSuccess("✅ RECEIVER STARTED SUCCESSFULLY");
-        logSuccess("═══════════════════════════════════════");
-        logSuccess("Waiting for media to cast...");
-
-        updateDebug("status", "Ready", "success");
-
-        // Show debug panel if enabled
-        if (DEBUG) {
-          document.getElementById("debug").classList.remove("hidden");
-          log("🐛 Debug panel visible");
-        }
-      } catch (error) {
-        logError("═══════════════════════════════════════");
-        logError("❌ FATAL ERROR: Failed to initialize receiver");
-        logError("═══════════════════════════════════════");
-        logError("Error message:", error.message);
-        logError("Error stack:", error.stack);
-        updateDebug("status", "FATAL ERROR", "error");
-        updateLastError(`Init failed: ${error.message}`);
-      }
+      context.start({ disableIdleTimeout: false });
+      addLog("🚀 Chromecast HLS.js Receiver started", "success");
     </script>
   </body>
 </html>
