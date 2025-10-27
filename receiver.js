@@ -114,22 +114,29 @@ class TakokaseReceiver {
     log("Receiver started successfully");
     updateDebugInfo("status", "Ready");
 
-    // Hide splash screen after delay
-    setTimeout(() => {
-      hideElement(elements.splashScreen);
-    }, CONFIG.SPLASH_DURATION);
+    // DON'T hide splash screen here - wait for video to load
+    // The splash will be hidden in onLoadComplete()
   }
 
   setupPlayerListeners() {
     const playerManager = this.playerManager;
 
-    // Player load complete - FIXED: Removed category.CORE
+    // Player load complete
     playerManager.addEventListener(
       cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
       (event) => this.onLoadComplete(event)
     );
 
-    // Error handling - FIXED: Removed category.CORE
+    // Player loading (when media starts loading)
+    playerManager.addEventListener(
+      cast.framework.events.EventType.PLAYER_LOADING,
+      (event) => {
+        log("Player LOADING event - media is being loaded");
+        updateDebugInfo("playbackState", "LOADING");
+      }
+    );
+
+    // Error handling
     playerManager.addEventListener(
       cast.framework.events.EventType.ERROR,
       (event) => this.onError(event)
@@ -158,7 +165,10 @@ class TakokaseReceiver {
   }
 
   interceptLoad(loadRequestData) {
-    log("LOAD intercepted:", loadRequestData);
+    log("🎬 LOAD intercepted:", loadRequestData);
+
+    // Update splash screen to show loading
+    elements.splashText.textContent = "Loading Media...";
 
     const mediaInfo = loadRequestData.media;
 
@@ -198,6 +208,8 @@ class TakokaseReceiver {
 
       // Show media info on screen
       this.displayMediaInfo(mediaInfo);
+    } else {
+      logError("❌ No media info in load request!");
     }
 
     return loadRequestData;
@@ -223,8 +235,12 @@ class TakokaseReceiver {
   }
 
   onLoadComplete(event) {
-    log("Player LOAD_COMPLETE event");
+    log("✅ Player LOAD_COMPLETE event - Video ready!");
     updateDebugInfo("playbackState", "LOADED");
+
+    // CRITICAL: Hide splash screen when video is ready to play
+    log("Hiding splash screen - video should now be visible");
+    hideElement(elements.splashScreen);
 
     // Detect available audio tracks
     this.detectAudioTracks();
@@ -249,11 +265,14 @@ class TakokaseReceiver {
   }
 
   onError(event) {
-    logError("Player error:", event);
+    logError("❌ Player error:", event);
 
     const errorReason =
       event.detailedErrorCode || event.error?.reason || "Unknown error";
     showError(`Playback error: ${errorReason}`);
+
+    // Hide splash on error so user can see error message
+    hideElement(elements.splashScreen);
   }
 
   detectAudioTracks() {
