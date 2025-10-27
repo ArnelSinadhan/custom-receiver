@@ -19,12 +19,19 @@
         height: 100vh;
       }
 
-      /* Video player container */
+      /* Video player - CRITICAL: Must be present for Cast framework */
       #player-container {
         position: absolute;
         width: 100%;
         height: 100%;
         background-color: #000000;
+      }
+
+      #player-container cast-media-player {
+        width: 100%;
+        height: 100%;
+        --splash-image: none;
+        --progress-color: #667eea;
       }
 
       /* Splash screen */
@@ -174,7 +181,7 @@
         display: block;
       }
 
-      /* Debug info (hidden by default) */
+      /* Debug info */
       #debug-info {
         position: absolute;
         top: 10px;
@@ -203,8 +210,10 @@
       <div class="spinner"></div>
     </div>
 
-    <!-- Player Container -->
-    <div id="player-container"></div>
+    <!-- Player Container - CRITICAL: Cast media player element -->
+    <div id="player-container">
+      <cast-media-player></cast-media-player>
+    </div>
 
     <!-- Media Info Overlay -->
     <div id="media-info">
