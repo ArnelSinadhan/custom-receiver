@@ -123,16 +123,14 @@ class TakokaseReceiver {
   setupPlayerListeners() {
     const playerManager = this.playerManager;
 
-    // Player load complete
+    // Player load complete - FIXED: Removed category.CORE
     playerManager.addEventListener(
-      cast.framework.events.category.CORE,
       cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
       (event) => this.onLoadComplete(event)
     );
 
-    // Error handling
+    // Error handling - FIXED: Removed category.CORE
     playerManager.addEventListener(
-      cast.framework.events.category.CORE,
       cast.framework.events.EventType.ERROR,
       (event) => this.onError(event)
     );
@@ -253,7 +251,8 @@ class TakokaseReceiver {
   onError(event) {
     logError("Player error:", event);
 
-    const errorReason = event.detailedErrorCode || event.error?.reason || "Unknown error";
+    const errorReason =
+      event.detailedErrorCode || event.error?.reason || "Unknown error";
     showError(`Playback error: ${errorReason}`);
   }
 
